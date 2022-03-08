@@ -17,5 +17,6 @@ typedef struct _stritem item;
 void slab_init();
 void *slabs_alloc(int size);
 void slabs_free(item *it);
+uint64_t slabs_memory_used();
 
 #endif /* SLABS_H */

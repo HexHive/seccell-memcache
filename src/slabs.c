@@ -139,3 +139,20 @@ void slabs_free(item *it) {
   p->slots = it;
   p->sl_curr++;
 }
+
+uint64_t slabs_memory_used() {
+  uint64_t storage = 0;
+  uint64_t total_in_slab, remain_in_slab;
+  slabclass_t *slab;
+
+  for(int id = 0; id < MAX_NUMBER_OF_SLAB_CLASSES; id++) {
+    if(slabclass[id].size == 0)
+      continue;
+    slab = &slabclass[id];
+    total_in_slab = slab->slabs * (uint64_t)slab_page_size;
+    remain_in_slab = slab->sl_curr * (uint64_t)slab->size;
+
+    storage += (total_in_slab - remain_in_slab);
+  }
+  return storage;
+}
