@@ -1,6 +1,6 @@
 # Experiment: memcached-like microbenchmark
 
-We create a in-memory key-value store.
+We create a (single-threaded) in-memory key-value store.
 
 > Note: We shamelessly copy code from `memcached`.
 
