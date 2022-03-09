@@ -13,7 +13,7 @@
 #define MIN(x, y)   (((x) < (y))? (x): (y))
 
 static item **hashtable = NULL;
-static unsigned hashpower = 10;
+static unsigned hashpower = DEFAULT_HASHPOWER;
 hash_func hash = jenkins_hash;
 
 int cache_init() {
@@ -127,5 +127,6 @@ void dump_cache() {
     if(hashtable[i])
       printf("\n");    
   }
-  printf("Used %ld bytes\n", storage);
+  /* Find memory usage from slab allocator */
+  printf("Used %lu bytes\n", slabs_memory_used());
 }
