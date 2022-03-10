@@ -18,17 +18,19 @@ static inline char whichchar(unsigned i) {
 }
 
 int main(int argc, char **argv) {
-  if(argc != 2) {
-    printf("Usage: %s <npasses>\n", argv[0]);
-    printf("npasses: Number of passes of get calls");
+  if(argc != 3) {
+    printf("Usage: %s <npasses> <nitems>\n", argv[0]);
+    printf("npasses: Number of passes of get calls\n");
+    printf("nitems: Number of items to access\n");
     exit(1);
   }
   unsigned npasses = (unsigned)strtoul(argv[1], NULL, 10);
+  unsigned nitems = (unsigned)strtoul(argv[2], NULL, 10);
 
   cache_init();
   char key[16], value[64];
 
-  for(int i = 0; i < NITEMS; i++) {
+  for(int i = 0; i < nitems; i++) {
     int tmp = i;
     int j;
     for(j = 0; j < NCHARS; j++) {
@@ -41,7 +43,7 @@ int main(int argc, char **argv) {
   }
 
   for(int j = 0; j < npasses; j++) {
-    for(int i = 0; i < NITEMS; i++) {
+    for(int i = 0; i < nitems; i++) {
       int tmp = i;
       int j;
       for(j = 0; j < NCHARS; j++) {
