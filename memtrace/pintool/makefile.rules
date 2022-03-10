@@ -1,0 +1,15 @@
+
+TOOL_CXXFLAGS += -g
+TOOL_LIBS += -lrt
+
+# This defines all the applications that will be run during the tests.
+TOOL_ROOTS := memtrace
+
+# This defines any additional object files that need to be compiled.
+OBJECT_ROOTS :=
+
+# This defines any additional dlls (shared objects), other than the pintools, that need to be compiled.
+DLL_ROOTS :=
+
+# This defines any static libraries (archives), that need to be built.
+LIB_ROOTS :=
