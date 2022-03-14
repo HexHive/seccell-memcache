@@ -32,6 +32,7 @@ typedef struct {
 #define N_ACCESSES 30000000
 access_t accesses[N_ACCESSES];
 unsigned count_accesses = 0;
+uint64_t icount = 0, dcount = 0;
 
 void flush_accesses() {
   // cout << "Flushing accesses...." << endl;
@@ -74,6 +75,7 @@ VOID DoAccessAccounting(char *rtn, ADDRINT ip, ADDRINT ptr, UINT32 size, BOOL lo
   if(!AccessTrackingOn)
     return; 
   
+  dcount++;
   accesses[count_accesses++] = {rtn, ip, false, NULL, load, ptr, size};
 
   if(count_accesses == N_ACCESSES)
@@ -87,8 +89,16 @@ VOID PrintMarker(char *rtn, ADDRINT ip, const char *where) {
     flush_accesses();
 }
 
+VOID CountInst(void) {
+  if(!AccessTrackingOn)
+    return; 
+
+  icount++;
+}
+
 /******************** Instrumentation Functions *************/
 VOID InstrumentAccess(INS ins, VOID *v) {
+  INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)CountInst, IARG_END);
 
   RTN rtn = INS_Rtn(ins);
   string name_cpp = (RTN_Valid(rtn))? RTN_Name(rtn): "Anon";
@@ -167,6 +177,9 @@ VOID Fini(int code, void *v) {
   PinLog << PinLogBuf;
   PinLogBuf[0] = '\0';
   PinLogBufSize = 0;
+
+  cerr << icount << " instructions " << endl;
+  cerr << dcount << " accesses " << endl;
 }
  
 /******************** MAIN ****************************/
