@@ -43,8 +43,12 @@ void account_inst(void) {
 
   if(!instrumentation_enable)
     return;
+  if(warmup)
+    return;
 
-  // if((inst_counter++ & 0xffffff) == 0) {
+  inst_counter++;
+
+  // if((inst_counter & 0xffffff) == 0) {
   //   printf("insn count %ld\n", inst_counter);
 
   //   printf("%15"PRIu64" %15"PRIu64" %15"PRIu64" %15"
@@ -61,12 +65,15 @@ void account_inst(void) {
 void account_data(void) {
   if(!instrumentation_enable)
     return;
+  if(warmup)
+    return;
 
   data_counter++;
 }
 
 void account_final(void) {
   // printf("insn count %ld\n", inst_counter);
+  printf("data access count: %ld\n", data_counter);
   printf("%15"PRIu64" %15"PRIu64" %15"PRIu64" %15"
         PRIu64" %15"PRIu64" %15"PRIu64" \n",
         l1i_tlb_misses,
@@ -282,8 +289,10 @@ int cycle_access(access_t access, uint16_t asid, enum access_type type) {
   }
 
   if(type == INST_ACCESS) {
-    user_insts += ((access.addr >> 48) == 0);
-    kern_insts += ((access.addr >> 48) == 0xffff);
+    if(!warmup) {
+      user_insts += ((access.addr >> 48) == 0);
+      kern_insts += ((access.addr >> 48) == 0xffff);
+    }
   }
 
   /* Access TLB, storing asid in top ASID_LEN bits by calling mixpageasid */

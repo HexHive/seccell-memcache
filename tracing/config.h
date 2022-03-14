@@ -34,7 +34,7 @@
 #define L1_I_ASSOC      8
 #define L1_I_LAT        4
 #define L1_I_SETS       ((L1_I_SIZE >> CACHE_LINE_BITS)/L1_I_ASSOC)
-#define LLC_SIZE        (8*1024*1024)
+#define LLC_SIZE        (16*1024*1024)
 #define LLC_ASSOC       16
 #define LLC_LAT         30
 #define LLC_SETS        ((LLC_SIZE >> CACHE_LINE_BITS)/LLC_ASSOC)
