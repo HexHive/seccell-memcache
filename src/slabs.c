@@ -7,7 +7,7 @@
 #include "slabs.h"
 
 static slabclass_t slabclass[MAX_NUMBER_OF_SLAB_CLASSES];
-static const uint32_t slab_page_size = 8 * 1024 * 1024;
+static const uint32_t slab_page_size = 32 * 1024 * 1024;
 
 
 static void do_slabs_free(void *ptr, const size_t size, unsigned int id) {

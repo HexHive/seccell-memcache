@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +31,7 @@ int main(int argc, char **argv) {
   cache_init();
   char key[16], value[64];
 
+  /* Set value into cache */
   for(int i = 0; i < nitems; i++) {
     int tmp = i;
     int j;
@@ -39,9 +41,11 @@ int main(int argc, char **argv) {
     }
     key[j] = '\0';
 
-    cache_set(key, j, "hell1hell2hell3hell4hell5", 25);
+    int r = cache_set(key, j, "hell1hell2hell3hell4hell5", 25);
+    assert(r >=0);
   }
 
+  /* Retrieve same values into cache */
   for(int j = 0; j < npasses; j++) {
     asm volatile("verr (%rsp)");
     for(int i = 0; i < nitems; i++) {
