@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
   }
 
   for(int j = 0; j < npasses; j++) {
+    asm volatile("verr (%rsp)");
     for(int i = 0; i < nitems; i++) {
       int tmp = i;
       int j;
@@ -54,6 +55,7 @@ int main(int argc, char **argv) {
 
       cache_get(key, j, value, 64);
     }
+    asm volatile("verw (%rsp)");
   }
   // dump_cache();
 
