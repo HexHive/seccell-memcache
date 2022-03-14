@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import datetime
 import os
 import subprocess as sp
 
@@ -12,26 +13,38 @@ def readable(size):
     return str(int(size/(1024 * 1024))) + 'M'
   else:
     return str(int(size/(1024 * 1024 * 1024))) + 'G'
+  
+def run_datapoint(data_dir, runs, size): 
+  pin_path = os.getcwd() + '/memtrace/pin/pin'
+  pintool_path = os.getcwd() + '/memtrace/pintool/obj-intel64/memtrace.so'
+  workload = os.getcwd() + '/src/main'
+  workload_args = [str(runs), str(size)]
+  data_filename = data_dir + '/pin_{}_{}.log'.format(runs, readable(size))
+  pin_cmd = [pin_path, '-t', pintool_path, '-d', data_filename, '--', workload] + workload_args
+  # Run workload with PIN
+  sp.run(pin_cmd)
+  
+  tlbcache = os.getcwd() + '/tracing/main'
+  tlb_cmd = [tlbcache, data_filename]
+  # Trace workload
+  traceproc = sp.run(tlb_cmd, capture_output=True)
+  
+  print('runs: {}, size: {}'.format(runs, readable(size)))
+  print(traceproc.stdout.decode('utf-8'))
+  with open(data_dir + '/log', 'a') as logfd:
+    print('runs: {}, size: {}'.format(runs, readable(size)), end='', file = logfd)
+    print(traceproc.stdout, file = logfd)
 
 def run():
-  for runs in [20]:
-    for size in [32*1024, 64*1024, 96*1024]:
-      pin_path = os.getcwd() + '/memtrace/pin/pin'
-      pintool_path = os.getcwd() + '/memtrace/pintool/obj-intel64/memtrace.so'
-      workload = os.getcwd() + '/src/main'
-      workload_args = [str(runs), str(size)]
-      data_filename = os.getcwd() + '/pin_{}_{}.log'.format(runs, readable(size))
-      pin_cmd = [pin_path, '-t', pintool_path, '-d', data_filename, '--', workload] + workload_args
-      # Run workload with PIN
-      sp.run(pin_cmd)
-      
-      print('runs: {}, size: {}'.format(runs, readable(size)), end='')
-      
-      tlbcache = os.getcwd() + '/tracing/main'
-      tlb_cmd = [tlbcache, data_filename]
-      # Trace workload
-      sp.run(tlb_cmd, capture_output=True)
+  dt = datetime.datetime.now()
+  data_dir = os.getcwd() + '/data_{:02n}_{:02n}_{:02n}_{:02n}_{:02n}_{:02n}'.format(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+  os.mkdir(data_dir)
   
+  with open(data_dir + '/log', 'x') as logfd:
+    pass
+  for runs in [4, 6]:
+    for size in [1*1024, 4 * 1024, 16 * 1024, 32*1024, 64*1024, 96*1024]:     
+      run_datapoint(data_dir, runs, size)
   
 def build(clean = False):
   mycache_build_cmd = ['make', '-C', 'src']
