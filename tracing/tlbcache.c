@@ -36,6 +36,7 @@ static uint64_t array_llc[LLC_SIZE >> CACHE_LINE_BITS];
 static unsigned long inst_counter = 0;
 static unsigned long data_counter = 0;
 bool instrumentation_enable;
+bool warmup;
 
 void account_inst(void) {
   char out[4096];
@@ -138,6 +139,7 @@ void init_tlbcache(void) {
   kern_insts = 0;
 
   instrumentation_enable = false;
+  warmup = false;
 }
 
 void __attribute__((unused))
@@ -246,10 +248,11 @@ cycle_helper(access_t acc, cache_t l1cache, uint64_t *l1stat,
   /* Might need to repeat if access spans cache line */
   for(unsigned i = 0; i < acc.size; i++) {
     if(access_cache(l1cache, acc.addr + i)) {
-      *l1stat += 1;
+      if(!warmup)
+        *l1stat += 1;
 
       uint64_t evict_addr = access_cache(l2cache, acc.addr + i);
-      if(evict_addr)
+      if(evict_addr && !warmup)
         *l2stat += 1;
 
       if(incl && (evict_addr != 1)) 
@@ -257,7 +260,6 @@ cycle_helper(access_t acc, cache_t l1cache, uint64_t *l1stat,
     }
   }
 }
-
 
 int cycle_access(access_t access, uint16_t asid, enum access_type type) {
   access_t _acc;

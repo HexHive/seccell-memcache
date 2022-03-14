@@ -21,6 +21,7 @@ typedef struct {
 } cache_t;
 
 extern bool instrumentation_enable;
+extern bool warmup;
 void dump_cache(cache_t cache);
 void init_tlbcache(void);
 void account_inst(void);

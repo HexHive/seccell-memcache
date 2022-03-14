@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <assert.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <signal.h>
@@ -11,7 +12,8 @@
 #include "tlbcache.h"
 
 #define LINEBUFLEN        4096
-#define MAXTOKENS         5
+#define MAXTOKENS         16
+#define WARMUP_REPS       2
 
 uint64_t lines_handled = 0;
 void status_handler(int x, siginfo_t *c, void *v) {
@@ -61,6 +63,8 @@ int main(int argc, char **argv) {
   int ntoken;
   uint64_t inst_addr, data_addr, data_size;
   access_t acc;
+  int reps;
+  bool repstarted;
 
   if(argc != 2) {
     printf("Usage: %s <tracefile>\n", argv[0]);
@@ -71,6 +75,8 @@ int main(int argc, char **argv) {
 
   init_tlbcache();
   instrumentation_enable = true;
+  warmup = true;
+  repstarted = false;
 
   tracef = fopen(argv[1], "r");
   while(fscanf(tracef, "%[^\n]\n", linebuf) != EOF) {
@@ -83,21 +89,35 @@ int main(int argc, char **argv) {
       token = strtok(NULL, " ");
     }
 
-    inst_addr = strtoul(tokens[0], NULL, 16);
-    data_addr = strtoul(tokens[2], NULL, 16);
-    data_size = strtoul(&tokens[3][1], NULL, 10);
+    if(strcmp(tokens[2], "start") == 0) {
+      assert(!repstarted);
+      repstarted = !repstarted;
+      // printf("Started rep %d\n", reps);
+    } else if(strcmp(tokens[2], "end") == 0) {
+      assert(repstarted);
+      repstarted = !repstarted;
+      // printf("Ended rep %d\n", reps);
+      /* End warmup after one repetition */
+      if(++reps == WARMUP_REPS)
+        warmup = false;
+    } else if (repstarted) {
+      inst_addr = strtoul(tokens[0], NULL, 16);
+      data_addr = strtoul(tokens[2], NULL, 16);
+      data_size = strtoul(&tokens[3][1], NULL, 10);
 
-    // printf("%lu\n", data_size);
-    acc.addr = data_addr;
-    acc.size = data_size;
-    cycle_access(acc, 0, DATA_ACCESS);
-    account_data();
-    account_inst();
+      // printf("%lu\n", data_size);
+      acc.addr = data_addr;
+      acc.size = data_size;
+      cycle_access(acc, 0, DATA_ACCESS);
+      account_data();
+      account_inst();
+    }
 
     lines_handled++;
     // exit(1);
   }
 
+  printf("Rounds total: %d, warmup: %d\n", reps, WARMUP_REPS);
   account_final();
 
   return 1;

@@ -11,5 +11,5 @@ main: ${OBJS} ${HEADERS}
 
 clean:
 	rm -f *.o
-	rm -o main
+	rm -f main
 
