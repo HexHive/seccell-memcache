@@ -21,11 +21,15 @@ int PinLogBufSize = 0;
 typedef struct {
   char *rtn;
   ADDRINT ip;
+  /* Markers */
+  BOOL marker;
+  const char *where; /* "start"/"end" */
+  /* Non-markers: loads/stores */
+  BOOL load;
   ADDRINT ptr;
   UINT32 size;
-  BOOL load;
 } access_t;
-#define N_ACCESSES 50000000
+#define N_ACCESSES 30000000
 access_t accesses[N_ACCESSES];
 unsigned count_accesses = 0;
 
@@ -33,13 +37,20 @@ void flush_accesses() {
   // cout << "Flushing accesses...." << endl;
   for(unsigned i = 0; i < count_accesses; i++) {
     char buf[100];
-    int n = snprintf(&PinLogBuf[PinLogBufSize], sizeof(buf), "%012lx (%s): %012lx (%02d, %c)\n", 
-                    accesses[i].ip, 
-                    accesses[i].rtn, 
-                    accesses[i].ptr, 
-                    accesses[i].size, 
-                    (accesses[i].load)? 'R': 'W');
-
+    int n;
+    if(accesses[i].marker) {
+      n = snprintf(&PinLogBuf[PinLogBufSize], sizeof(buf), "%012lx (%s): %s\n",
+                  accesses[i].ip, 
+                  accesses[i].rtn, 
+                  accesses[i].where);
+    } else {
+      n = snprintf(&PinLogBuf[PinLogBufSize], sizeof(buf), "%012lx (%s): %012lx (%02d, %c)\n", 
+                  accesses[i].ip, 
+                  accesses[i].rtn, 
+                  accesses[i].ptr, 
+                  accesses[i].size, 
+                  (accesses[i].load)? 'R': 'W');
+    }
     PinLogBufSize += n;
     
     if(PinLogBufSize > 5 * LOGBUFSIZE / 6) {
@@ -63,25 +74,40 @@ VOID DoAccessAccounting(char *rtn, ADDRINT ip, ADDRINT ptr, UINT32 size, BOOL lo
   if(!AccessTrackingOn)
     return; 
   
-  accesses[count_accesses++] = {rtn, ip, ptr, size, load};
+  accesses[count_accesses++] = {rtn, ip, false, NULL, load, ptr, size};
 
   if(count_accesses == N_ACCESSES)
     flush_accesses();
 }
 
+VOID PrintMarker(char *rtn, ADDRINT ip, const char *where) {
+  accesses[count_accesses++] = {rtn, ip, true, where, false, 0, 0};
+
+  if(count_accesses == N_ACCESSES)
+    flush_accesses();
+}
 
 /******************** Instrumentation Functions *************/
 VOID InstrumentAccess(INS ins, VOID *v) {
-  BOOL isRead = INS_IsMemoryRead(ins);
-  BOOL isWrit = INS_IsMemoryWrite(ins);
-
-  if(!(isRead || isWrit))
-    return;
 
   RTN rtn = INS_Rtn(ins);
   string name_cpp = (RTN_Valid(rtn))? RTN_Name(rtn): "Anon";
   char *rtn_name = (char *) malloc(name_cpp.length() + 1);
   strcpy(rtn_name, name_cpp.c_str());
+
+  BOOL isRead = INS_IsMemoryRead(ins);
+  BOOL isWrit = INS_IsMemoryWrite(ins);
+
+  if(INS_Opcode(ins) == XED_ICLASS_VERR) {
+    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)PrintMarker, IARG_PTR, rtn_name,
+    IARG_INST_PTR, IARG_PTR, "start", IARG_END);
+    return;
+  } else if(INS_Opcode(ins) == XED_ICLASS_VERW) {
+    INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)PrintMarker, IARG_PTR, rtn_name,
+    IARG_INST_PTR, IARG_PTR, "end", IARG_END);
+    return;
+  } else if(!(isRead || isWrit))
+    return;
 
   if(isRead){
     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)DoAccessAccounting, IARG_PTR, rtn_name, IARG_INST_PTR, IARG_MEMORYREAD_EA, IARG_MEMORYREAD_SIZE, IARG_BOOL, TRUE, IARG_END);
