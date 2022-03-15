@@ -23,6 +23,11 @@ int cache_init();
 
 /* Our k-v store commands */
 int cache_set(const char *key, int nkey, const char *value, int nval);
+
+/* Returns: 
+ * -1 on error
+ * length of value on success
+ */
 int cache_get(const char *key, int nkey, char *value, int maxnval);
 int flush_all();
 /* Future: add/replace/append/prepend/compare-swap */

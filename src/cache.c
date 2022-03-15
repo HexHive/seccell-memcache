@@ -7,6 +7,9 @@
 #include "cache.h"
 #include "hash.h"
 
+/*** BIG TODO ***/
+/* Unify into global LRU list as in memcached, and have separate hashlist */
+
 #define hashsize(n) ((uint32_t)1<<(n))
 #define hashmask(n) (hashsize(n)-1)
 #define MAX(x, y)   (((x) > (y))? (x): (y))
@@ -87,7 +90,7 @@ int cache_get(const char *key, int nkey, char *value, int maxnval) {
   memcpy(value, ITEM_val(it), nval);
   value[nval] = '\0';
 
-  return 0;
+  return nval;
 }
 
 int cache_set(const char *key, int nkey, const char *value, int nval) {
