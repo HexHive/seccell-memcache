@@ -110,11 +110,11 @@ VOID InstrumentAccess(INS ins, VOID *v) {
 
   if(INS_Opcode(ins) == XED_ICLASS_VERR) {
     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)PrintMarker, IARG_PTR, rtn_name,
-    IARG_INST_PTR, IARG_PTR, "start", IARG_END);
+    IARG_INST_PTR, IARG_PTR, "repstart", IARG_END);
     return;
   } else if(INS_Opcode(ins) == XED_ICLASS_VERW) {
     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)PrintMarker, IARG_PTR, rtn_name,
-    IARG_INST_PTR, IARG_PTR, "end", IARG_END);
+    IARG_INST_PTR, IARG_PTR, "repend", IARG_END);
     return;
   } else if(!(isRead || isWrit))
     return;
@@ -130,33 +130,34 @@ VOID InstrumentAccess(INS ins, VOID *v) {
 }
 
 VOID ImageLoad(IMG img, VOID *v) {
-  // cout << "Loading image " << IMG_Name(img) << endl;
-
-  /* The accounting will start at cache_get, and end at the final instruction 
-    * (if it is a return), or at the exit function */
-  RTN cacheGetFn = RTN_FindByName(img, "cache_get");
-  if(RTN_Valid(cacheGetFn)) {
-    RTN_Open(cacheGetFn);
-
-    INS entryIns = RTN_InsHead(cacheGetFn);
-    // cout << "cache_get at 0x" << hex << INS_Address(entryIns) << endl;
-    INS_InsertCall(entryIns, IPOINT_BEFORE, (AFUNPTR)SetTrigger, IARG_BOOL, TRUE, IARG_END);
-
-    INS retIns = RTN_InsTail(cacheGetFn);
-    if(INS_IsRet(retIns)) {
-      // cout << "exit at 0x" << hex << INS_Address(retIns) << endl;
-      INS_InsertCall(retIns, IPOINT_BEFORE, (AFUNPTR)SetTrigger, IARG_BOOL, FALSE, IARG_END);
-    }
-    RTN_Close(cacheGetFn);
-
+  /* We will enable statistics accounting during the call to cache_get_wrapper */
+  RTN cacheGetWrapperFn = RTN_FindByName(img, "cache_get_wrapper");
+  if(RTN_Valid(cacheGetWrapperFn)) {
+    RTN_Open(cacheGetWrapperFn);
+    RTN_InsertCall(cacheGetWrapperFn, IPOINT_BEFORE, (AFUNPTR)SetTrigger,
+                    IARG_BOOL, TRUE, IARG_END);
+    RTN_InsertCall(cacheGetWrapperFn, IPOINT_AFTER, (AFUNPTR)SetTrigger,
+                    IARG_BOOL, FALSE, IARG_END);
+    RTN_Close(cacheGetWrapperFn);
   }
 
-  // RTN exitRtn = RTN_FindByName(img, "exit");
-  // if(RTN_Valid(exitRtn)) {
-  //   if(EndAddr == 0)
-  //       EndAddr = RTN_Address(exitRtn);
-  //   cout << "exit at 0x" << hex << EndAddr << endl;
-  // }
+  /* We will simulate a compartment switch around cache_get */
+  const char *rtn_name = "cache_get";
+  RTN cacheGetFn = RTN_FindByName(img, rtn_name);
+  if(RTN_Valid(cacheGetFn)) {
+    RTN_Open(cacheGetFn);
+    RTN_InsertCall(cacheGetFn, IPOINT_BEFORE, (AFUNPTR)PrintMarker, 
+                                IARG_PTR, rtn_name,
+                                IARG_INST_PTR, 
+                                IARG_PTR, "switch_cache", 
+                                IARG_END);
+    RTN_InsertCall(cacheGetFn, IPOINT_AFTER, (AFUNPTR)PrintMarker, 
+                                IARG_PTR, rtn_name,
+                                IARG_INST_PTR, 
+                                IARG_PTR, "switch_wrapper", 
+                                IARG_END);
+    RTN_Close(cacheGetFn);
+  }
 }
 
 /******************** INIT/FINI *************************/

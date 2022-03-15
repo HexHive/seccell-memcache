@@ -56,6 +56,8 @@ void timer_setup() {
   /******************************************************/
 }
 
+#define WRAPPER_COMPARTMENT_ID             1
+#define CACHE_COMPARTMENT_ID               2
 int main(int argc, char **argv) {
   FILE *tracef;
   char linebuf[LINEBUFLEN];
@@ -65,6 +67,7 @@ int main(int argc, char **argv) {
   access_t acc;
   int reps;
   bool repstarted;
+  int cur_comp_id = WRAPPER_COMPARTMENT_ID;
 
   if(argc != 2) {
     printf("Usage: %s <tracefile>\n", argv[0]);
@@ -89,17 +92,23 @@ int main(int argc, char **argv) {
       token = strtok(NULL, " ");
     }
 
-    if(strcmp(tokens[2], "start") == 0) {
+    if(strcmp(tokens[2], "repstart") == 0) {
       assert(!repstarted);
       repstarted = !repstarted;
       // printf("Started rep %d\n", reps);
-    } else if(strcmp(tokens[2], "end") == 0) {
+    } else if(strcmp(tokens[2], "repend") == 0) {
       assert(repstarted);
       repstarted = !repstarted;
       // printf("Ended rep %d\n", reps);
       /* End warmup after one repetition */
       if(++reps == WARMUP_REPS)
         warmup = false;
+    } else if(strcmp(tokens[2], "switch_cache") == 0) {
+      assert(cur_comp_id == WRAPPER_COMPARTMENT_ID);
+      cur_comp_id = CACHE_COMPARTMENT_ID;
+    } else if(strcmp(tokens[2], "switch_wrapper") == 0) {
+      assert(cur_comp_id == CACHE_COMPARTMENT_ID);
+      cur_comp_id = WRAPPER_COMPARTMENT_ID;
     } else if (repstarted) {
       inst_addr = strtoul(tokens[0], NULL, 16);
       data_addr = strtoul(tokens[2], NULL, 16);
@@ -108,7 +117,7 @@ int main(int argc, char **argv) {
       // printf("%lu\n", data_size);
       acc.addr = data_addr;
       acc.size = data_size;
-      cycle_access(acc, 0, DATA_ACCESS);
+      cycle_access(acc, cur_comp_id, DATA_ACCESS);
       account_data();
       account_inst();
     }

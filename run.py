@@ -42,8 +42,8 @@ def run():
   
   with open(data_dir + '/log', 'x') as logfd:
     pass
-  for runs in [4, 6]:
-    for size in [1*1024, 4 * 1024, 16 * 1024, 32*1024, 64*1024, 96*1024]:     
+  for runs in [3]:
+    for size in [1*1024, 4 * 1024, 16 * 1024, 32*1024, 64*1024, 96*1024, 128*1024, 192*1024, 256*1024, 384*1024, 512*1024]:     
       run_datapoint(data_dir, runs, size)
   
 def build(clean = False):
